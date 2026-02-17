@@ -5,6 +5,7 @@ import base64
 import os
 import streamlit.components.v1 as components
 import math
+import altair as alt
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="HIA Intelligence Suite", layout="wide")
@@ -17,20 +18,32 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     return ""
 
-# --- STYLING ---
+# --- NAVIGATION LOGIC ---
+if 'page' not in st.session_state:
+    st.session_state.page = 'home'
+
+def change_page(new_page):
+    st.session_state.page = new_page
+    st.rerun()
+
+# --- DYNAMIC STYLING ---
 st.markdown("""
     <style>
     header, footer, [data-testid="stHeader"] { visibility: hidden; height: 0; }
-    .block-container { max-width: 1100px; padding-top: 1.5rem; padding-bottom: 1rem; }
+    .block-container { max-width: 1150px; padding-top: 1.5rem; padding-bottom: 1rem; }
+    
     .excel-header { 
-        background-color: #cbd5e1; color: #1e293b; font-weight: bold; 
-        padding: 4px 8px; border: 1px solid #94a3b8; margin-top: 10px;
-        font-size: 0.9rem;
+        background-color: #1e293b; color: white; font-weight: bold; 
+        padding: 8px 12px; border: 1px solid #94a3b8; margin-top: 15px;
+        font-size: 0.95rem; border-radius: 4px 4px 0 0;
     }
-    .stTable { border: 1px solid #94a3b8; background-color: white; }
+    
+    .stTable { border: 1px solid #94a3b8; background-color: white; margin-top: -1px; }
+    
     [data-testid="stSidebar"] .stNumberInput, [data-testid="stSidebar"] .stSelectbox, [data-testid="stSidebar"] .stRadio {
         margin-bottom: -15px !important;
     }
+
     @media print {
         @page { size: portrait; margin: 0.25in; }
         .stApp { zoom: 70%; background-color: white !important; background-image: none !important; }
@@ -56,18 +69,13 @@ st.markdown("""
 @st.cache_data
 def calculate_canadian_ltt(price, is_first_buyer, province, city, loan_amt=0):
     tax = 0
-    
     if province == "Ontario":
-        # PROVINCIAL
         if price > 2000000: tax += (price - 2000000) * 0.025 + 36475
         elif price > 400000: tax += (price - 400000) * 0.02 + 4475
         elif price > 250000: tax += (price - 250000) * 0.015 + 2225
         elif price > 55000: tax += (price - 55000) * 0.01 + 275
         else: tax += price * 0.005
-        
         if is_first_buyer: tax = max(0, tax - 4000)
-
-        # TORONTO MUNICIPAL
         if city == "Toronto":
             m_tax = 0
             temp_p = price
@@ -78,18 +86,15 @@ def calculate_canadian_ltt(price, is_first_buyer, province, city, loan_amt=0):
                     temp_p = thresh
             if is_first_buyer: m_tax = max(0, m_tax - 4475)
             tax += m_tax + 86.78
-
     elif province == "British Columbia":
         if price > 3000000: tax = (price - 3000000) * 0.05 + (1000000 * 0.03) + (1800000 * 0.02) + 2000
         elif price > 2000000: tax = (price - 2000000) * 0.03 + (1800000 * 0.02) + 2000
         elif price > 200000: tax = (price - 200000) * 0.02 + 2000
         else: tax = price * 0.01
-
     elif province == "Alberta":
         transfer_fee = 50 + (math.ceil(price / 5000) * 5)
         mortgage_fee = 50 + (math.ceil(loan_amt / 5000) * 5)
         tax = transfer_fee + mortgage_fee
-
     elif province == "Quebec":
         if city == "Montreal":
             if price > 3113000: tax = (price - 3113000) * 0.04 + 75150 
@@ -98,40 +103,27 @@ def calculate_canadian_ltt(price, is_first_buyer, province, city, loan_amt=0):
         else:
             if price > 254400: tax = (price - 254400) * 0.015 + 2800
             else: tax = price * 0.01
-
     elif province == "Nova Scotia":
         tax = price * (0.015 if city == "Halifax" else 0.01)
-
     elif province in ["New Brunswick", "PEI"]:
         tax = price * 0.01
-
     elif province == "Manitoba":
         if price > 200000: tax = (price - 200000) * 0.02 + 1650
         else: tax = price * 0.01
-
     elif province == "Saskatchewan":
         tax = price * 0.003
-
     elif province == "Newfoundland and Labrador":
         tax = 100 + (max(0, price - 500) / 100 * 0.40)
-
-    # --- TERRITORIES ADDED ---
     elif province == "Northwest Territories":
-        # $1.50 per $1,000 of value (min $100) + Mortgage fee (~$1 per $1,000)
         tax = max(100, (price / 1000) * 1.5) + max(80, (loan_amt / 1000) * 1.0)
-
     elif province == "Yukon":
-        # Tiered registration fees (Approximate scale for common ranges)
         if price <= 100000: tax = 50
         elif price <= 500000: tax = 150
         elif price <= 1000000: tax = 250
         else: tax = 500
-        tax += 50 # Standard mortgage registration fee
-
+        tax += 50
     elif province == "Nunavut":
-        # Similar to NWT: $1.50 per $1,000 (min $60)
         tax = max(60, (price / 1000) * 1.5) + 40
-
     return tax
 
 def calc_stats(loan_amt, amort, h_rate, heloc_used, tax_bracket, claim_cca, p_price, legal_closing, ltt_val, renos, prop_tax, ins, equip_rent, condo_fees, utilities, other_mo, rate, rent):
@@ -143,26 +135,19 @@ def calc_stats(loan_amt, amort, h_rate, heloc_used, tax_bracket, claim_cca, p_pr
     ann_cash = (rent - (pi + op_ex_mo + heloc_mo)) * 12
     ann_prin = (pi - int_mo) * 12
     profit_pre_cca = (rent * 12) - (int_mo * 12 + op_ex_mo * 12 + heloc_mo * 12)
-    
     if claim_cca:
         building_base = (p_price + legal_closing + ltt_val + renos) * 0.70
         cca_max = (building_base * 0.04) * 0.5
         cca_claimed = max(0, min(profit_pre_cca, cca_max))
     else:
         cca_claimed = 0
-        
     taxable_income = max(0, profit_pre_cca - cca_claimed)
     at_cash_only = ann_cash - (taxable_income * tax_bracket)
     at_total = at_cash_only + ann_prin
     bt_total = ann_cash + ann_prin
     return ann_cash, ann_prin, at_total, bt_total, at_cash_only
 
-# --- NAVIGATION ---
-def change_page(new_page):
-    st.session_state.page = new_page
-    st.rerun()
-
-if 'page' not in st.session_state: st.session_state.page = 'home'
+# --- PAGE ROUTING ---
 
 if st.session_state.page == 'home':
     if os.path.exists("background.png"):
@@ -178,26 +163,53 @@ if st.session_state.page == 'home':
 
 elif st.session_state.page == 'bdwm':
     if st.button("← Back"): change_page('home')
-    st.title("📊 Market Intelligence Overview")
-    market_html = """<div class="tradingview-widget-container"><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>{"colorTheme": "light", "dateRange": "12M", "showChart": true, "locale": "en", "width": "100%", "height": "600", "largeChartUrl": "", "isTransparent": false, "showSymbolLogo": true, "tabs": [{"title": "Indices", "symbols": [{"s": "TSX:XIU", "d": "TSX 60"}, {"s": "FOREXCOM:SPXUSD", "d": "S&P 500"}, {"s": "FOREXCOM:NSXUSD", "d": "Nasdaq 100"}]}]}</script></div>"""
-    components.html(market_html, height=650)
+    st.title("📊 Market Intelligence & Value Analysis")
+    
+    # Value Analysis Section (Z-Score Logic)
+    csv_file = "BDWM Analysis Summary.csv"
+    if os.path.exists(csv_file):
+        try:
+            df = pd.read_csv(csv_file)
+            df['PPSF'] = df['Price'] / df['SqFt']
+            mean_ppsf = df['PPSF'].mean()
+            std_ppsf = df['PPSF'].std()
+            df['Z-Score'] = (df['PPSF'] - mean_ppsf) / std_ppsf
+            
+            m1, m2 = st.columns([1, 2])
+            with m1:
+                st.markdown("<div class='excel-header'>MARKET OVERVIEW</div>", unsafe_allow_html=True)
+                st.metric("Avg Price / SqFt", f"${mean_ppsf:,.2f}")
+                st.metric("Total Listings Analyzed", len(df))
+                st.write("**Top Value Opportunities**")
+                st.dataframe(df[['Address', 'Price', 'Z-Score']].sort_values('Z-Score').head(5), hide_index=True)
+            
+            with m2:
+                st.markdown("<div class='excel-header'>VALUE SCATTER MAP (Z-SCORE)</div>", unsafe_allow_html=True)
+                chart = alt.Chart(df).mark_circle(size=100).encode(
+                    x=alt.X('SqFt', title='Square Footage'),
+                    y=alt.Y('Price', title='Listing Price'),
+                    color=alt.Color('Z-Score', scale=alt.Scale(scheme='redblue', reverse=True)),
+                    tooltip=['Address', 'Price', 'SqFt', 'PPSF']
+                ).interactive().properties(height=400)
+                st.altair_chart(chart, use_container_width=True)
+        except:
+            st.warning("Found CSV but columns 'Price' or 'SqFt' might be missing.")
+    
+    # Global Markets Section
+    st.markdown("<div class='excel-header'>GLOBAL MARKET INDICATORS</div>", unsafe_allow_html=True)
+    market_html = """<div class="tradingview-widget-container"><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>{"colorTheme": "light", "dateRange": "12M", "showChart": true, "locale": "en", "width": "100%", "height": "500", "largeChartUrl": "", "isTransparent": false, "showSymbolLogo": true, "tabs": [{"title": "Indices", "symbols": [{"s": "TSX:XIU", "d": "TSX 60"}, {"s": "FOREXCOM:SPXUSD", "d": "S&P 500"}, {"s": "FOREXCOM:NSXUSD", "d": "Nasdaq 100"}]}]}</script></div>"""
+    components.html(market_html, height=520)
 
 elif st.session_state.page == 'rental':
     if st.button("← Back"): change_page('home')
     
     with st.sidebar:
         st.subheader("PROPERTY DETAILS")
-        prov = st.selectbox("Province/Territory", [
-            "Ontario", "Quebec", "British Columbia", "Alberta", "Manitoba", "Saskatchewan", 
-            "Nova Scotia", "New Brunswick", "PEI", "Newfoundland", 
-            "Yukon", "Northwest Territories", "Nunavut"
-        ])
-        
+        prov = st.selectbox("Province/Territory", ["Ontario", "Quebec", "British Columbia", "Alberta", "Manitoba", "Saskatchewan", "Nova Scotia", "New Brunswick", "PEI", "Newfoundland", "Yukon", "Northwest Territories", "Nunavut"])
         city_options = ["Other"]
         if prov == "Ontario": city_options = ["Outside Toronto", "Toronto"]
         elif prov == "Quebec": city_options = ["Outside Montreal", "Montreal"]
         elif prov == "Nova Scotia": city_options = ["Outside Halifax", "Halifax"]
-        
         city = st.selectbox("City", city_options)
         is_first_buyer = st.radio("First Home Buyer?", ["No", "Yes"], horizontal=True) == "Yes"
         p_price = st.number_input("Purchase price", value=280000)
@@ -207,16 +219,13 @@ elif st.session_state.page == 'rental':
         amort = st.number_input("Amortization (Yrs)", value=25)
         tax_bracket = st.number_input("Marginal Tax (%)", value=44.97) / 100
         claim_cca = st.radio("Claim CCA Deduction?", ["No", "Yes"], horizontal=True) == "Yes"
-        
         st.subheader("REVENUE")
         target_rent = st.number_input("Current Rental Rate", value=1800)
-
         st.subheader("UP FRONT COSTS")
         renos = st.number_input("Renovations (Capitalized)", value=15000)
         legal_closing = st.number_input("Legal/Closing", value=3500)
         heloc_used = st.number_input("HELOC Used", value=15000)
         other_upfront = st.number_input("Other Upfront", value=0)
-
         st.subheader("MONTHLY EXPENSES")
         prop_tax = st.number_input("Property tax", value=125)
         ins = st.number_input("Insurance", value=65)
@@ -233,11 +242,10 @@ elif st.session_state.page == 'rental':
     loan_amt = temp_loan
     down_amt = p_price * down_pct
     invested_cap = (down_amt + legal_closing + ltt_val + renos + other_upfront) - heloc_used
-
     calc_params = [loan_amt, amort, h_rate, heloc_used, tax_bracket, claim_cca, p_price, legal_closing, ltt_val, renos, prop_tax, ins, equip_rent, condo_fees, utilities, other_mo]
 
     st.title(f"🏠 Rental Analysis: {city if city != 'Other' else prov}")
-
+    
     st.markdown("<div class='excel-header'>CAPITAL COMMITMENT</div>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -251,7 +259,6 @@ elif st.session_state.page == 'rental':
         st.write(f"**HELOC Used:** :red[- ${heloc_used:,.2f}]")
     st.success(f"### **Net Cash Invested: ${invested_cap:,.2f}**")
 
-    # ... Rest of the tables/logic (at_net_rows, cost_rows, matrix_df) remains exactly the same as previous version ...
     st.markdown("<div class='excel-header'>NET CASH RETURN (AFTER-TAX POCKET MONEY)</div>", unsafe_allow_html=True)
     rent_steps = [target_rent - 200, target_rent - 100, target_rent, target_rent + 100, target_rent + 200]
     at_net_rows = []
@@ -279,26 +286,15 @@ elif st.session_state.page == 'rental':
 
     st.markdown("<div class='excel-header'>RETURN METRIC MATRIX - INTEREST RATE SENSITIVITY</div>", unsafe_allow_html=True)
     shifts = [x / 1000 for x in range(-20, 25, 5)] 
-    labels = ["Rate change", "Mortgage rate", "Net cash return ($)", "Repayment of mortgage ($)", 
-              "After tax total ($)", "Before tax total ($)", "Net cash return (%)", 
-              "Repayment of mortgage (%)", "After tax total (%)", "Before tax total (%)", "Repayment period (years)"]
+    labels = ["Rate change", "Mortgage rate", "Net cash return ($)", "Repayment of mortgage ($)", "After tax total ($)", "Before tax total ($)", "Net cash return (%)", "Repayment of mortgage (%)", "After tax total (%)", "Before tax total (%)", "Repayment period (years)"]
     matrix_df = pd.DataFrame({"Metric": labels})
-    
     for s in shifts:
         cash, prin, at, bt, _ = calc_stats(*calc_params, m_rate + s, target_rent)
-        if bt <= 0: repay_val = "99.00+"
-        elif invested_cap <= 0: repay_val = "0.00 (Infinite)"
-        else: repay_val = f"{invested_cap/bt:.2f}"
-
+        repay_val = "99.00+" if bt <= 0 else ("0.00 (Infinite)" if invested_cap <= 0 else f"{invested_cap/bt:.2f}")
         if invested_cap <= 0: cash_p, prin_p, at_p, bt_p = "∞", "∞", "∞", "∞"
         else:
-            cash_p = f"{(cash/invested_cap)*100:.2f}%"
-            prin_p = f"{(prin/invested_cap)*100:.2f}%"
-            at_p = f"{(at/invested_cap)*100:.2f}%"
-            bt_p = f"{(bt/invested_cap)*100:.2f}%"
-
+            cash_p = f"{(cash/invested_cap)*100:.2f}%"; prin_p = f"{(prin/invested_cap)*100:.2f}%"; at_p = f"{(at/invested_cap)*100:.2f}%"; bt_p = f"{(bt/invested_cap)*100:.2f}%"
         matrix_df[f"{s*100:+.1f}%"] = [f"{s*100:+.1f}%", f"{(m_rate+s)*100:.2f}%", f"${cash:,.0f}", f"${prin:,.0f}", f"${at:,.0f}", f"${bt:,.0f}", cash_p, prin_p, at_p, bt_p, repay_val]
-    
     st.table(matrix_df.style.apply(lambda row: ['background-color: yellow;' if row.name in [4, 5, 8, 9] else '' for _ in row], axis=1))
 
     # --- PRINT ONLY SUMMARY ---
