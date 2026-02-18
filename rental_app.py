@@ -44,6 +44,34 @@ st.markdown("""
         margin-bottom: -15px !important;
     }
 
+    /* Noob Walkthrough Styling */
+    .quest-header {
+        background: linear-gradient(90deg, #3b82f6 0%, #1e3a8a 100%);
+        color: white; padding: 10px 15px; border-radius: 8px;
+        margin: 20px 0 10px 0; font-weight: bold; font-size: 1.2rem;
+        display: flex; align-items: center;
+    }
+    .quest-step { font-weight: bold; color: #3b82f6; margin-right: 10px; }
+    
+    /* Casual Player Styling */
+    .casual-header {
+        background: linear-gradient(90deg, #8b5cf6 0%, #4c1d95 100%);
+        color: white; padding: 10px 15px; border-radius: 8px;
+        margin: 20px 0 10px 0; font-weight: bold; font-size: 1.2rem;
+        display: flex; align-items: center;
+    }
+
+    /* Expert Player Styling */
+    .expert-header {
+        background: linear-gradient(90deg, #10b981 0%, #064e3b 100%);
+        color: white; padding: 10px 15px; border-radius: 8px;
+        margin: 20px 0 10px 0; font-weight: bold; font-size: 1.2rem;
+        display: flex; align-items: center;
+    }
+
+    .pro-tip { background-color: #f0fdf4; border-left: 5px solid #22c55e; padding: 10px; margin: 10px 0; border-radius: 4px; color: #166534; }
+    .checklist-header { font-weight: bold; color: #1e3a8a; margin-top: 10px; text-decoration: underline; }
+
     @media print {
         @page { size: portrait; margin: 0.25in; }
         .stApp { zoom: 70%; background-color: white !important; background-image: none !important; }
@@ -65,7 +93,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- GLOBAL CALCULATORS ---
-
 @st.cache_data
 def calculate_canadian_ltt(price, is_first_buyer, province, city, loan_amt=0):
     tax = 0
@@ -152,20 +179,22 @@ def calc_stats(loan_amt, amort, h_rate, heloc_used, tax_bracket, claim_cca, p_pr
 if st.session_state.page == 'home':
     if os.path.exists("background.png"):
         bin_str = get_base64("background.png")
-        st.markdown(f"""<style>.stApp {{ background-image: url("data:image/png;base64,{bin_str}"); background-size: cover; background-position: center; }} div.stButton > button p {{ font-size: 24px !important; font-weight: bold !important; }} div.stButton > button {{ height: 100px !important; }}</style>""", unsafe_allow_html=True)
+        st.markdown(f"""<style>.stApp {{ background-image: url("data:image/png;base64,{bin_str}"); background-size: cover; background-position: center; }} div.stButton > button p {{ font-size: 20px !important; font-weight: bold !important; }} div.stButton > button {{ height: 100px !important; }}</style>""", unsafe_allow_html=True)
     else:
-        st.markdown("<style>.stApp { background-color: #f8fafc; } div.stButton > button p { font-size: 24px !important; font-weight: bold !important; } div.stButton > button { height: 100px !important; }</style>", unsafe_allow_html=True)
+        st.markdown("<style>.stApp { background-color: #f8fafc; } div.stButton > button p { font-size: 20px !important; font-weight: bold !important; } div.stButton > button { height: 100px !important; }</style>", unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top: 200px;'></div>", unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
+
+    c1, c2, c3, c4, c5 = st.columns(5)
     if c1.button("📊 MARKET INTELLIGENCE", use_container_width=True): change_page('bdwm')
     if c2.button("🏠 RENTAL ANALYSIS", use_container_width=True): change_page('rental')
+    if c3.button("🎮 NOOB WALKTHROUGH", use_container_width=True): change_page('noob')
+    if c4.button("⚔️ CASUAL PLAYER WALKTHROUGH", use_container_width=True): change_page('casual')
+    if c5.button("👑 EXPERT PLAYER WALKTHROUGH", use_container_width=True): change_page('expert')
 
 elif st.session_state.page == 'bdwm':
     if st.button("← Back"): change_page('home')
     st.title("📊 Market Intelligence & Value Analysis")
-    
-    # Value Analysis Section (Z-Score Logic)
     csv_file = "BDWM Analysis Summary.csv"
     if os.path.exists(csv_file):
         try:
@@ -174,7 +203,6 @@ elif st.session_state.page == 'bdwm':
             mean_ppsf = df['PPSF'].mean()
             std_ppsf = df['PPSF'].std()
             df['Z-Score'] = (df['PPSF'] - mean_ppsf) / std_ppsf
-            
             m1, m2 = st.columns([1, 2])
             with m1:
                 st.markdown("<div class='excel-header'>MARKET OVERVIEW</div>", unsafe_allow_html=True)
@@ -182,7 +210,6 @@ elif st.session_state.page == 'bdwm':
                 st.metric("Total Listings Analyzed", len(df))
                 st.write("**Top Value Opportunities**")
                 st.dataframe(df[['Address', 'Price', 'Z-Score']].sort_values('Z-Score').head(5), hide_index=True)
-            
             with m2:
                 st.markdown("<div class='excel-header'>VALUE SCATTER MAP (Z-SCORE)</div>", unsafe_allow_html=True)
                 chart = alt.Chart(df).mark_circle(size=100).encode(
@@ -194,15 +221,12 @@ elif st.session_state.page == 'bdwm':
                 st.altair_chart(chart, use_container_width=True)
         except:
             st.warning("Found CSV but columns 'Price' or 'SqFt' might be missing.")
-    
-    # Global Markets Section
     st.markdown("<div class='excel-header'>GLOBAL MARKET INDICATORS</div>", unsafe_allow_html=True)
     market_html = """<div class="tradingview-widget-container"><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>{"colorTheme": "light", "dateRange": "12M", "showChart": true, "locale": "en", "width": "100%", "height": "500", "largeChartUrl": "", "isTransparent": false, "showSymbolLogo": true, "tabs": [{"title": "Indices", "symbols": [{"s": "TSX:XIU", "d": "TSX 60"}, {"s": "FOREXCOM:SPXUSD", "d": "S&P 500"}, {"s": "FOREXCOM:NSXUSD", "d": "Nasdaq 100"}]}]}</script></div>"""
     components.html(market_html, height=520)
 
 elif st.session_state.page == 'rental':
     if st.button("← Back"): change_page('home')
-    
     with st.sidebar:
         st.subheader("PROPERTY DETAILS")
         prov = st.selectbox("Province/Territory", ["Ontario", "Quebec", "British Columbia", "Alberta", "Manitoba", "Saskatchewan", "Nova Scotia", "New Brunswick", "PEI", "Newfoundland", "Yukon", "Northwest Territories", "Nunavut"])
@@ -234,7 +258,6 @@ elif st.session_state.page == 'rental':
         utilities = st.number_input("Utilities", value=0)
         other_mo = st.number_input("Other Monthly", value=0)
 
-    # --- MATH ENGINE ---
     if down_pct >= 0.20: cmhc_p = 0.0
     else: cmhc_p = 0.04 if down_pct <= 0.05 else 0.031 if down_pct <= 0.1 else 0.028 if down_pct <= 0.15 else 0.024
     temp_loan = (p_price * (1 - down_pct)) * (1 + cmhc_p)
@@ -245,7 +268,6 @@ elif st.session_state.page == 'rental':
     calc_params = [loan_amt, amort, h_rate, heloc_used, tax_bracket, claim_cca, p_price, legal_closing, ltt_val, renos, prop_tax, ins, equip_rent, condo_fees, utilities, other_mo]
 
     st.title(f"🏠 Rental Analysis: {city if city != 'Other' else prov}")
-    
     st.markdown("<div class='excel-header'>CAPITAL COMMITMENT</div>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -297,7 +319,6 @@ elif st.session_state.page == 'rental':
         matrix_df[f"{s*100:+.1f}%"] = [f"{s*100:+.1f}%", f"{(m_rate+s)*100:.2f}%", f"${cash:,.0f}", f"${prin:,.0f}", f"${at:,.0f}", f"${bt:,.0f}", cash_p, prin_p, at_p, bt_p, repay_val]
     st.table(matrix_df.style.apply(lambda row: ['background-color: yellow;' if row.name in [4, 5, 8, 9] else '' for _ in row], axis=1))
 
-    # --- PRINT ONLY SUMMARY ---
     st.markdown("<div class='page-break print-only-summary'></div><div class='print-only-summary'><div class='excel-header'>ANALYSIS INPUT SUMMARY</div>", unsafe_allow_html=True)
     summary_df = pd.DataFrame({
         "Variable": ["Province", "City", "Purchase Price", "Downpayment %", "Mortgage Rate", "Target Rent", "Property Tax", "Renovations"],
@@ -305,3 +326,212 @@ elif st.session_state.page == 'rental':
     })
     st.table(summary_df)
     st.markdown("</div>", unsafe_allow_html=True)
+
+elif st.session_state.page == 'noob':
+    if st.button("← Back to Hub"): change_page('home')
+    
+    st.title("🎮 Financial Quest Log: Mastering the Game")
+    st.progress(0.15, text="Main Quest Progress: 15%")
+
+    st.markdown("""
+    Welcome to the **Financial MMO**. Most people play without a tutorial. You're smarter. 
+    Wealth planning is a long-term RPG where you're building a character that **cannot fail the late game**.
+    It doesn't matter when you start; it matters that you follow the meta.
+    """)
+
+    # --- QUEST 1 ---
+    st.markdown('<div class="quest-header"><span class="quest-step">QUEST 1:</span> Building Your Base Stats</div>', unsafe_allow_html=True)
+    with st.expander("Expand for Class Details & Stat Buffs"):
+        st.write("""
+        The first stage of any wealth plan is optimizing your **Active Income (Human Capital)**.
+        - **Primary Stat:** High-Value Skills. A significant salary bump is the most effective "gold farm" early in your journey.
+        - **Buffs:** Invest gold in yourself first. Certifications, specialized training, and networking are multipliers for your earning potential.
+        - **Goal:** Increase your "Base DPS" (Active Income) to fund the more complex gear in later quests.
+        """)
+        st.markdown('<div class="pro-tip">💡 <b>PRO-TIP:</b> Treat your career as your primary business. Every $1,000 spent on high-ROI training can yield $10,000+ in annual salary gains.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="checklist-header">Quest Requirements:</div>', unsafe_allow_html=True)
+        st.write("* [ ] Identify top 3 skills in your industry with the highest pay gap.\n* [ ] Set a 12-month target for salary growth or side-income generation.")
+
+    # --- QUEST 2 ---
+    st.markdown('<div class="quest-header"><span class="quest-step">QUEST 2:</span> Stability and Defense Zone</div>', unsafe_allow_html=True)
+    with st.expander("Expand for Survival Guide"):
+        st.write("""
+        You can't raid high-level dungeons (Large Investments) with 1 HP. Build your defensive wall:
+        - **Positive Cash Flow:** Income must exceed Expenses. If you leak gold every month, no investment can save you.
+        - **Anti-Curse Shield:** Purge high-interest debt. Interest payments are a "leech" debuff that drains your progress.
+        - **Emergency Potion:** Maintain a liquid reserve for 3-6 months. This prevents a "Game Over" when unexpected events hit.
+        """)
+        st.markdown('<div class="pro-tip">💡 <b>PRO-TIP:</b> Automated transfers are your best friend. Set your "defense" to auto-pilot so you never forget to pay your future self.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="checklist-header">Quest Requirements:</div>', unsafe_allow_html=True)
+        st.write("* [ ] Eliminate all debt with >10% interest.\n* [ ] Fund an 'Emergency Potion' account with at least $5,000.")
+
+    # --- QUEST 3 ---
+    st.markdown('<div class="quest-header"><span class="quest-step">QUEST 3:</span> Equipment Slots (Tax Shelters)</div>', unsafe_allow_html=True)
+    with st.expander("Expand for Equipment Specs"):
+        st.write("""
+        In the Canadian meta, accounts are your **Gear Slots**. They aren't the investment; they are the containers that determine your tax resistance.
+        - **TFSA (Tax-Free Savings Account):** The legendary slot. Gains are never taxed. Perfect for long-term compounding growth.
+        - **RRSP (Registered Retirement Savings Plan):** A tactical slot. Reduces your current taxable income, deferred until later levels.
+        - **FHSA (First Home Savings Account):** The ultimate starter bonus for real estate. Tax-deductible contributions and tax-free withdrawals for a home purchase.
+        """)
+        
+        st.markdown('<div class="pro-tip">💡 <b>PRO-TIP:</b> Maximize the FHSA if you plan to buy property. It combines the tax-deduction of an RRSP with the tax-free growth of a TFSA. It is essentially "God Tier" gear.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="checklist-header">Quest Requirements:</div>', unsafe_allow_html=True)
+        st.write("* [ ] Open an FHSA if property ownership is a goal.\n* [ ] Audit current TFSA/RRSP contributions vs. annual limits.")
+
+    # --- QUEST 4 ---
+    st.markdown('<div class="quest-header"><span class="quest-step">QUEST 4:</span> The Time-Multiplier Buff</div>', unsafe_allow_html=True)
+    with st.expander("Expand for Leveling Mechanics"):
+        st.write("""
+        Compounding is an **exponential XP multiplier**. 
+        - **Start Now:** The earlier you begin, the less "grinding" you have to do later. Time does the heavy lifting for you.
+        - **RNG Protection:** Consistency beats timing. Regular contributions protect you from market volatility (bad RNG).
+        """)
+        st.markdown('<div class="pro-tip">💡 <b>PRO-TIP:</b> The "Rule of 72" helps you estimate doubling time. Divide 72 by your expected return rate to see how fast your gold grows.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="checklist-header">Quest Requirements:</div>', unsafe_allow_html=True)
+        st.write("* [ ] Set up a recurring investment (even if small) to trigger the 'Compounding' buff.\n* [ ] Review portfolio fees—low-cost ETFs are the most efficient gear for this quest.")
+
+    # --- WARNINGS ---
+    st.markdown('<div class="quest-header" style="background:linear-gradient(90deg, #ef4444 0%, #7f1d1d 100%);">⚠️ NOOB TRAPS (AVOID AT ALL COSTS)</div>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        st.error("**Lifestyle Inflation:** Leveling up your overhead every time you level up your income. It keeps your net worth stuck at Level 1.")
+        st.error("**The Comparison Lag:** Watching other players' highlight reels on social media. Play your own game at your own pace.")
+    with c2:
+        st.error("**Toxic Debt:** Financing a lifestyle you haven't farmed for yet. This is playing the game on 'Hard Mode' with no reward.")
+        st.error("**Gold Decay:** Leaving your entire stash in a 0% interest account. Inflation is a 'Burn' effect that slowly erodes your purchasing power.")
+
+    # --- ENDING ---
+    st.success("### 🏆 Final Objective: Financial Optionality")
+    st.write("The goal of the game isn't just to hoard gold—it's to reach a level where you have the freedom to choose your own quests. Stay disciplined, optimize your gear, and play the long game.")
+
+# --- CASUAL PLAYER PAGE ---
+elif st.session_state.page == 'casual':
+    if st.button("← Back to Hub"): change_page('home')
+    st.title("⚔️ Casual Player Walkthrough: Mid-Game Strategies")
+    
+    # --- EFFICIENCY SCORECARDS ---
+    st.markdown("<div class='excel-header'>📊 BUILD PERFORMANCE SCORECARDS</div>", unsafe_allow_html=True)
+    s1, s2 = st.columns(2)
+    with s1:
+        st.subheader("🛡️ Tax Efficiency Scorecard")
+        st.markdown("""
+        | Efficiency Tier | Strategy Coverage Description |
+        | :--- | :--- |
+        | **S-Tier** | **Structural Shielding:** Advanced maneuvers that convert non-deductible expenses into tax advantages. |
+        | **A-Tier** | **Optimized Shelters:** Utilizing specialized accounts and asset location to minimize leakage. |
+        | **B-Tier** | **Standard Protection:** Using core registered accounts to protect growth from immediate taxation. |
+        | **C-Tier** | **Unshielded:** Operating primarily in taxable accounts with no specific tax-reduction plan. |
+        """)
+    with s2:
+        st.subheader("📈 Profit Efficiency Scorecard")
+        st.markdown("""
+        | Efficiency Tier | Wealth Velocity Description |
+        | :--- | :--- |
+        | **Hyper-Growth** | **High Velocity:** Strategies utilizing leverage or active business models to accelerate capital. |
+        | **Market-Beater** | **Enhanced Growth:** Strategies aimed at reducing friction (fees) and maximizing market capture. |
+        | **Stable-Build** | **Core Growth:** Diversified, low-cost approaches designed for long-term steady accumulation. |
+        | **Inflation-Hedge**| **Capital Preservation:** Low-risk strategies focused on maintaining purchasing power. |
+        """)
+
+    st.markdown("""
+    Below is a breakdown of 20 maneuvers. Each one is tagged with its **Scorecard Tier** so you know how it upgrades your build.
+    """)
+
+    # --- STRATEGY DATA ---
+    simpler_strategies = [
+        ("TFSA Maxing", "**[B-Tier: Tax Efficiency]** Standard Protection. Tax-free growth and withdrawals. Prioritize this for long-term compounding growth."),
+        ("RRSP Deduction", "**[B-Tier: Tax Efficiency]** Standard Protection. Tactical tax deferral to shift burden to lower-income years."),
+        ("FHSA Starter", "**[A-Tier: Tax Efficiency]** Optimized Shelter. The ultimate real estate entry buff; tax-deductible in, tax-free out."),
+        ("RESP (CESG Match)", "**[Stable-Build: Profit Efficiency]** Core Growth. Government-assisted education build via 20% grant matching."),
+        ("RDSP (Disability)", "**[Market-Beater: Profit Efficiency]** Enhanced Growth. Specialized grants and bonds for eligible players."),
+        ("Employer Match", "**[Hyper-Growth: Profit Efficiency]** High Velocity. Immediate ROI via workplace benefits; never leave gold on the table."),
+        ("HBP (Home Buyers' Plan)", "**[B-Tier: Tax Efficiency]** Standard Protection. Utilizing RRSP capital to fund property entry without tax penalty."),
+        ("LLP (Lifelong Learning)", "**[B-Tier: Tax Efficiency]** Standard Protection. Deploying RRSP funds tax-free for career-based stat upgrades."),
+        ("House Hacking", "**[Market-Beater: Profit Efficiency]** Enhanced Growth. Reducing housing overhead by converting space into income."),
+        ("Low-MER Indexing", "**[Stable-Build: Profit Efficiency]** Core Growth. Eliminating fee-based friction to ensure market performance.")
+    ]
+
+    complex_strategies = [
+        ("The Smith Maneuver", "**[S-Tier: Tax Efficiency]** Structural Shielding. Converting personal debt interest into tax deductions."),
+        ("Spousal Loan Strategy", "**[S-Tier: Tax Efficiency]** Structural Shielding. Income splitting between spouses at prescribed rates."),
+        ("The BRRRR Method", "**[Hyper-Growth: Profit Efficiency]** High Velocity. Scaling real estate via forced appreciation and equity recycling."),
+        ("Corporate Wealth Injection", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Using small business tax rates to maximize investment capital."),
+        ("Asset Location Optimization", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Placing assets strategically to avoid foreign withholding taxes."),
+        ("Dividend Tax Harvesting", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Maximizing the Canadian Dividend Tax Credit in taxable accounts."),
+        ("Principal Residence Flipping", "**[S-Tier: Tax Efficiency]** Structural Shielding. Utilizing the PRE to generate 100% tax-free capital gains."),
+        ("Leveraged ETF Rotation", "**[Hyper-Growth: Profit Efficiency]** High Velocity. Using leverage to outpace standard index returns in bull cycles."),
+        ("The FHSA-RRSP Double Dip", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Pivoting real estate deductions into retirement shelters."),
+        ("Capital Gain Harvesting", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Realizing gains in low-income years to step-up cost basis.")
+    ]
+
+    # --- TWO COLUMN LAYOUT ---
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("### 🛡️ Standard Gear (Simpler)")
+        for title, desc in simpler_strategies:
+            with st.expander(f"**{title}**"):
+                st.write(desc)
+
+    with col2:
+        st.markdown("### 🔥 Advanced Enchants (Complex)")
+        for title, desc in complex_strategies:
+            with st.expander(f"**{title}**"):
+                st.write(desc)
+        
+    st.info("💡 **Casual Player Walkthrough Tip:** These strategies carry higher risk/complexity. Always consult with a CPA or Fee-Only advisor before executing high-level maneuvers.")
+
+# --- EXPERT PLAYER PAGE ---
+elif st.session_state.page == 'expert':
+    if st.button("← Back to Hub"): change_page('home')
+    st.title("👑 Expert Player: Structural Arbitrage & Wealth Preservation")
+    
+    st.markdown("""
+    At this level, "picking stocks" is irrelevant. You are now competing on **Structural Advantage**. 
+    The goal is to move wealth into silos where the government has no "share" of the growth, utilizing complex legal and corporate frameworks.
+    """)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown('<div class="expert-header">🛡️ Infrastructure & Tax Arbitrage</div>', unsafe_allow_html=True)
+        
+        infra_strategies = [
+            ("The 3-Tier Corporate Purge", "**Strategy:** Cleaning 'tainted' active business assets into a HoldCo to maintain LCGE eligibility. Decouples operations from passive investments."),
+            ("Prescribed Rate Spousal Trusts", "**Strategy:** Locking in low interest rates via formal loans to shift high-yield income from 54% brackets to lower spouse brackets perpetually."),
+            ("The Capital Class Swap", "**Strategy:** Utilizing Corporate Class investment funds to convert taxable interest/dividends into deferred capital gains within non-registered environments."),
+            ("Individual Pension Plans (IPP)", "**Strategy:** A 'Super-RRSP' for business owners. Allows for significantly higher contribution limits and corporate tax deductions for management fees."),
+            ("The Pipeline Maneuver", "**Strategy:** Post-mortem tax planning to avoid double taxation on corporate shares upon death, extracting cash at capital gains rates vs. dividend rates."),
+            ("Estate Freezing & Refreezing", "**Strategy:** Capping current tax liability at today's value and passing future growth to the next generation via a Family Trust."),
+            ("Passive Income Grind-Down Mitigation", "**Strategy:** Managing the $50k passive income threshold in a Corp to prevent the loss of the Small Business Deduction (SBD)."),
+            ("Health Welfare Trusts (HWT/PHSP)", "**Strategy:** Converting personal family medical expenses into 100% tax-deductible business expenses for the corporation."),
+            ("Inter-Vivos Asset Transfers", "**Strategy:** Utilizing 'Living Trusts' to manage asset distribution outside of probate, ensuring privacy and immediate control for heirs."),
+            ("Capital Dividend Account (CDA) Flushing", "**Strategy:** Strategically paying out tax-free dividends from the non-taxable portion of corporate capital gains to clear the CDA.")
+        ]
+        
+        for title, desc in infra_strategies:
+            with st.expander(f"**{title}**"):
+                st.write(desc)
+
+    with col2:
+        st.markdown('<div class="expert-header">🔥 Advanced Capital & Estate Enchants</div>', unsafe_allow_html=True)
+        
+        capital_strategies = [
+            ("Immediate Financing Arrangement (IFA)", "**Strategy:** Using corporate dollars to fund a large permanent policy, then immediately borrowing the CSV back to reinvest in the business."),
+            ("Cash Surrender Value (CSV) Lending", "**Strategy:** Using life insurance cash values as collateral for low-interest bank loans to fund acquisitions without triggering tax on gains."),
+            ("Cascading Life Insurance", "**Strategy:** Funding policies on children/grandchildren to move wealth down generations tax-free, effectively bypassing the 21-year trust rule."),
+            ("The 'Smith' with Multiplier", "**Strategy:** Leveraging primary residence equity into a corporate-owned investment portfolio to create deductible interest at the highest corporate rate."),
+            ("Grantor Retained Income Trusts (GRIT)", "**Strategy:** Advanced succession planning where the grantor retains income for a term before the principal passes to beneficiaries tax-efficiently."),
+            ("Donation of Publicly Traded Securities", "**Strategy:** Donating appreciated stocks to charity to eliminate the capital gains tax entirely while receiving a full FMV tax credit."),
+            ("Alternative Minimum Tax (AMT) Optimization", "**Strategy:** Timing large charitable donations and capital gain realizations to navigate the restrictive 2024 AMT rules."),
+            ("Shared Ownership Life Insurance", "**Strategy:** Splitting the cost/benefit of a policy between a Corp and a Shareholder to optimize estate liquidity and personal access."),
+            ("Derivative-Based Yield Enhancement", "**Strategy:** Using covered call overlays or collar structures within a Corp to manufacture 'synthetic' capital gains over interest."),
+            ("Private Health Services Plan (PHSP)", "**Strategy:** Structuring executive compensation to include tax-free health spending accounts that bypass payroll and income taxes.")
+        ]
+
+        for title, desc in capital_strategies:
+            with st.expander(f"**{title}**"):
+                st.write(desc)
+        
+    st.warning("⚠️ **EXPERT LEVEL ADVISORY:** These maneuvers require a 'Tax Dream Team' (CPA, Tax Lawyer, and Estate Specialist). Execution errors at this level can trigger GAAR (General Anti-Avoidance Rule) penalties.")
