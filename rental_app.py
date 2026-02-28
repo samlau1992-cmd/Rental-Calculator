@@ -8,7 +8,11 @@ import math
 import altair as alt
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="HIA Intelligence Suite", layout="wide")
+st.set_page_config(
+    page_title="HIA Intelligence Suite", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # --- BACKGROUND HELPER ---
 def get_base64(bin_file):
@@ -27,68 +31,79 @@ def change_page(new_page):
     st.rerun()
 
 # --- DYNAMIC STYLING ---
-st.markdown("""
+if st.session_state.page == 'bdwm':
+    container_width = "95%"
+else:
+    container_width = "1150px"
+
+st.markdown(f"""
     <style>
-    header, footer, [data-testid="stHeader"] { visibility: hidden; height: 0; }
-    .block-container { max-width: 1150px; padding-top: 1.5rem; padding-bottom: 1rem; }
+    /* Ensure Header is visible for the toggle button but hide footer */
+    footer {{ visibility: hidden; }}
     
-    .excel-header { 
+    /* Make the Sidebar Toggle Button Bold and Black */
+    button[data-testid="stSidebarCollapseButton"] {{
+        color: black !important;
+        font-weight: bold !important;
+    }}
+    button[data-testid="stSidebarCollapseButton"] svg {{
+        fill: black !important;
+        stroke: black !important;
+        stroke-width: 2px !important;
+    }}
+
+    .block-container {{ max-width: {container_width}; padding-top: 1.5rem; padding-bottom: 1rem; }}
+    
+    .excel-header {{ 
         background-color: #1e293b; color: white; font-weight: bold; 
         padding: 8px 12px; border: 1px solid #94a3b8; margin-top: 15px;
         font-size: 0.95rem; border-radius: 4px 4px 0 0;
-    }
+    }}
     
-    .stTable { border: 1px solid #94a3b8; background-color: white; margin-top: -1px; }
+    .stTable {{ border: 1px solid #94a3b8; background-color: white; margin-top: -1px; }}
     
-    [data-testid="stSidebar"] .stNumberInput, [data-testid="stSidebar"] .stSelectbox, [data-testid="stSidebar"] .stRadio {
-        margin-bottom: -15px !important;
-    }
-
-    /* Noob Walkthrough Styling */
-    .quest-header {
+    .quest-header {{
         background: linear-gradient(90deg, #3b82f6 0%, #1e3a8a 100%);
         color: white; padding: 10px 15px; border-radius: 8px;
         margin: 20px 0 10px 0; font-weight: bold; font-size: 1.2rem;
         display: flex; align-items: center;
-    }
-    .quest-step { font-weight: bold; color: #3b82f6; margin-right: 10px; }
+    }}
+    .quest-step {{ font-weight: bold; color: #3b82f6; margin-right: 10px; }}
     
-    /* Casual Player Styling */
-    .casual-header {
+    .casual-header {{
         background: linear-gradient(90deg, #8b5cf6 0%, #4c1d95 100%);
         color: white; padding: 10px 15px; border-radius: 8px;
         margin: 20px 0 10px 0; font-weight: bold; font-size: 1.2rem;
         display: flex; align-items: center;
-    }
+    }}
 
-    /* Expert Player Styling */
-    .expert-header {
+    .expert-header {{
         background: linear-gradient(90deg, #10b981 0%, #064e3b 100%);
         color: white; padding: 10px 15px; border-radius: 8px;
         margin: 20px 0 10px 0; font-weight: bold; font-size: 1.2rem;
         display: flex; align-items: center;
-    }
+    }}
 
-    .pro-tip { background-color: #f0fdf4; border-left: 5px solid #22c55e; padding: 10px; margin: 10px 0; border-radius: 4px; color: #166534; }
-    .checklist-header { font-weight: bold; color: #1e3a8a; margin-top: 10px; text-decoration: underline; }
+    .pro-tip {{ background-color: #f0fdf4; border-left: 5px solid #22c55e; padding: 10px; margin: 10px 0; border-radius: 4px; color: #166534; }}
+    .checklist-header {{ font-weight: bold; color: #1e3a8a; margin-top: 10px; text-decoration: underline; }}
 
-    @media print {
-        @page { size: portrait; margin: 0.25in; }
-        .stApp { zoom: 70%; background-color: white !important; background-image: none !important; }
-        [data-testid="stSidebar"] { display: none !important; }
-        .main .block-container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
-        div[data-testid="stTable"], .stTable { 
+    @media print {{
+        @page {{ size: portrait; margin: 0.25in; }}
+        .stApp {{ zoom: 70%; background-color: white !important; background-image: none !important; }}
+        [data-testid="stSidebar"] {{ display: none !important; }}
+        .main .block-container {{ max-width: 100% !important; padding: 0 !important; margin: 0 !important; }}
+        div[data-testid="stTable"], .stTable {{ 
             display: block !important; 
             overflow: visible !important; 
             visibility: visible !important;
             page-break-inside: avoid !important; 
-        }
-        .excel-header, .stMetric { page-break-inside: avoid !important; }
-        button, header, footer, .stActionButton { display: none !important; }
-        .print-only-summary { display: block !important; visibility: visible !important; }
-        .page-break { display: block; page-break-before: always; }
-    }
-    @media screen { .print-only-summary { display: none !important; } }
+        }}
+        .excel-header, .stMetric {{ page-break-inside: avoid !important; }}
+        button, header, footer, .stActionButton {{ display: none !important; }}
+        .print-only-summary {{ display: block !important; visibility: visible !important; }}
+        .page-break {{ display: block; page-break-before: always; }}
+    }}
+    @media screen {{ .print-only-summary {{ display: none !important; }} }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -124,7 +139,7 @@ def calculate_canadian_ltt(price, is_first_buyer, province, city, loan_amt=0):
         tax = transfer_fee + mortgage_fee
     elif province == "Quebec":
         if city == "Montreal":
-            if price > 3113000: tax = (price - 3113000) * 0.04 + 75150 
+            if price > 3113000: tax = (price - 3113000) * 0.04 + 75150
             elif price > 500000: tax = (price - 500000) * 0.02 + 6395
             else: tax = price * 0.01
         else:
@@ -187,14 +202,16 @@ if st.session_state.page == 'home':
 
     c1, c2, c3, c4, c5 = st.columns(5)
     if c1.button("📊 MARKET INTELLIGENCE", use_container_width=True): change_page('bdwm')
-    if c2.button("🏠 RENTAL ANALYSIS", use_container_width=True): change_page('rental')
+    if c2.button("🏠 NEW RENTAL ANALYSIS", use_container_width=True): change_page('rental')
     if c3.button("🎮 NOOB WALKTHROUGH", use_container_width=True): change_page('noob')
     if c4.button("⚔️ CASUAL PLAYER WALKTHROUGH", use_container_width=True): change_page('casual')
     if c5.button("👑 EXPERT PLAYER WALKTHROUGH", use_container_width=True): change_page('expert')
 
 elif st.session_state.page == 'bdwm':
     if st.button("← Back"): change_page('home')
-    st.title("📊 Market Intelligence & Value Analysis")
+    
+    # Title removed to eliminate double-header
+    
     csv_file = "BDWM Analysis Summary.csv"
     if os.path.exists(csv_file):
         try:
@@ -221,12 +238,18 @@ elif st.session_state.page == 'bdwm':
                 st.altair_chart(chart, use_container_width=True)
         except:
             st.warning("Found CSV but columns 'Price' or 'SqFt' might be missing.")
-    st.markdown("<div class='excel-header'>GLOBAL MARKET INDICATORS</div>", unsafe_allow_html=True)
-    market_html = """<div class="tradingview-widget-container"><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>{"colorTheme": "light", "dateRange": "12M", "showChart": true, "locale": "en", "width": "100%", "height": "500", "largeChartUrl": "", "isTransparent": false, "showSymbolLogo": true, "tabs": [{"title": "Indices", "symbols": [{"s": "TSX:XIU", "d": "TSX 60"}, {"s": "FOREXCOM:SPXUSD", "d": "S&P 500"}, {"s": "FOREXCOM:NSXUSD", "d": "Nasdaq 100"}]}]}</script></div>"""
-    components.html(market_html, height=520)
+    
+    pdf_path = "analysis summary.pdf"
+    if os.path.exists(pdf_path):
+        with open(pdf_path, "rb") as f:
+            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+        # Appended #toolbar=0 to the base64 source to hide the PDF viewer title bar
+        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}#toolbar=0" style="width:100%; height:1200px;" type="application/pdf"></iframe>'
+        st.markdown(pdf_display, unsafe_allow_html=True)
 
 elif st.session_state.page == 'rental':
     if st.button("← Back"): change_page('home')
+    
     with st.sidebar:
         st.subheader("PROPERTY DETAILS")
         prov = st.selectbox("Province/Territory", ["Ontario", "Quebec", "British Columbia", "Alberta", "Manitoba", "Saskatchewan", "Nova Scotia", "New Brunswick", "PEI", "Newfoundland", "Yukon", "Northwest Territories", "Nunavut"])
@@ -267,7 +290,7 @@ elif st.session_state.page == 'rental':
     invested_cap = (down_amt + legal_closing + ltt_val + renos + other_upfront) - heloc_used
     calc_params = [loan_amt, amort, h_rate, heloc_used, tax_bracket, claim_cca, p_price, legal_closing, ltt_val, renos, prop_tax, ins, equip_rent, condo_fees, utilities, other_mo]
 
-    st.title(f"🏠 Rental Analysis: {city if city != 'Other' else prov}")
+    st.title(f"🏠 New Rental Analysis: {city if city != 'Other' else prov}")
     st.markdown("<div class='excel-header'>CAPITAL COMMITMENT</div>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -307,7 +330,7 @@ elif st.session_state.page == 'rental':
     ))
 
     st.markdown("<div class='excel-header'>RETURN METRIC MATRIX - INTEREST RATE SENSITIVITY</div>", unsafe_allow_html=True)
-    shifts = [x / 1000 for x in range(-20, 25, 5)] 
+    shifts = [x / 1000 for x in range(-20, 25, 5)]
     labels = ["Rate change", "Mortgage rate", "Net cash return ($)", "Repayment of mortgage ($)", "After tax total ($)", "Before tax total ($)", "Net cash return (%)", "Repayment of mortgage (%)", "After tax total (%)", "Before tax total (%)", "Repayment period (years)"]
     matrix_df = pd.DataFrame({"Metric": labels})
     for s in shifts:
@@ -329,17 +352,14 @@ elif st.session_state.page == 'rental':
 
 elif st.session_state.page == 'noob':
     if st.button("← Back to Hub"): change_page('home')
-    
     st.title("🎮 Financial Quest Log: Mastering the Game")
     st.progress(0.15, text="Main Quest Progress: 15%")
-
     st.markdown("""
     Welcome to the **Financial MMO**. Most people play without a tutorial. You're smarter. 
     Wealth planning is a long-term RPG where you're building a character that **cannot fail the late game**.
     It doesn't matter when you start; it matters that you follow the meta.
     """)
 
-    # --- QUEST 1 ---
     st.markdown('<div class="quest-header"><span class="quest-step">QUEST 1:</span> Building Your Base Stats</div>', unsafe_allow_html=True)
     with st.expander("Expand for Class Details & Stat Buffs"):
         st.write("""
@@ -352,7 +372,6 @@ elif st.session_state.page == 'noob':
         st.markdown('<div class="checklist-header">Quest Requirements:</div>', unsafe_allow_html=True)
         st.write("* [ ] Identify top 3 skills in your industry with the highest pay gap.\n* [ ] Set a 12-month target for salary growth or side-income generation.")
 
-    # --- QUEST 2 ---
     st.markdown('<div class="quest-header"><span class="quest-step">QUEST 2:</span> Stability and Defense Zone</div>', unsafe_allow_html=True)
     with st.expander("Expand for Survival Guide"):
         st.write("""
@@ -365,7 +384,6 @@ elif st.session_state.page == 'noob':
         st.markdown('<div class="checklist-header">Quest Requirements:</div>', unsafe_allow_html=True)
         st.write("* [ ] Eliminate all debt with >10% interest.\n* [ ] Fund an 'Emergency Potion' account with at least $5,000.")
 
-    # --- QUEST 3 ---
     st.markdown('<div class="quest-header"><span class="quest-step">QUEST 3:</span> Equipment Slots (Tax Shelters)</div>', unsafe_allow_html=True)
     with st.expander("Expand for Equipment Specs"):
         st.write("""
@@ -374,12 +392,10 @@ elif st.session_state.page == 'noob':
         - **RRSP (Registered Retirement Savings Plan):** A tactical slot. Reduces your current taxable income, deferred until later levels.
         - **FHSA (First Home Savings Account):** The ultimate starter bonus for real estate. Tax-deductible contributions and tax-free withdrawals for a home purchase.
         """)
-        
         st.markdown('<div class="pro-tip">💡 <b>PRO-TIP:</b> Maximize the FHSA if you plan to buy property. It combines the tax-deduction of an RRSP with the tax-free growth of a TFSA. It is essentially "God Tier" gear.</div>', unsafe_allow_html=True)
         st.markdown('<div class="checklist-header">Quest Requirements:</div>', unsafe_allow_html=True)
         st.write("* [ ] Open an FHSA if property ownership is a goal.\n* [ ] Audit current TFSA/RRSP contributions vs. annual limits.")
 
-    # --- QUEST 4 ---
     st.markdown('<div class="quest-header"><span class="quest-step">QUEST 4:</span> The Time-Multiplier Buff</div>', unsafe_allow_html=True)
     with st.expander("Expand for Leveling Mechanics"):
         st.write("""
@@ -391,8 +407,7 @@ elif st.session_state.page == 'noob':
         st.markdown('<div class="checklist-header">Quest Requirements:</div>', unsafe_allow_html=True)
         st.write("* [ ] Set up a recurring investment (even if small) to trigger the 'Compounding' buff.\n* [ ] Review portfolio fees—low-cost ETFs are the most efficient gear for this quest.")
 
-    # --- WARNINGS ---
-    st.markdown('<div class="quest-header" style="background:linear-gradient(90deg, #ef4444 0%, #7f1d1d 100%);">⚠️ NOOB TRAPS (AVOID AT ALL COSTS)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="quest-header" style="background: linear-gradient(90deg, #ef4444 0%, #7f1d1d 100%);">⚠️ NOOB TRAPS (AVOID AT ALL COSTS)</div>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
         st.error("**Lifestyle Inflation:** Leveling up your overhead every time you level up your income. It keeps your net worth stuck at Level 1.")
@@ -400,17 +415,12 @@ elif st.session_state.page == 'noob':
     with c2:
         st.error("**Toxic Debt:** Financing a lifestyle you haven't farmed for yet. This is playing the game on 'Hard Mode' with no reward.")
         st.error("**Gold Decay:** Leaving your entire stash in a 0% interest account. Inflation is a 'Burn' effect that slowly erodes your purchasing power.")
-
-    # --- ENDING ---
     st.success("### 🏆 Final Objective: Financial Optionality")
     st.write("The goal of the game isn't just to hoard gold—it's to reach a level where you have the freedom to choose your own quests. Stay disciplined, optimize your gear, and play the long game.")
 
-# --- CASUAL PLAYER PAGE ---
 elif st.session_state.page == 'casual':
     if st.button("← Back to Hub"): change_page('home')
     st.title("⚔️ Casual Player Walkthrough: Mid-Game Strategies")
-    
-    # --- EFFICIENCY SCORECARDS ---
     st.markdown("<div class='excel-header'>📊 BUILD PERFORMANCE SCORECARDS</div>", unsafe_allow_html=True)
     s1, s2 = st.columns(2)
     with s1:
@@ -438,66 +448,52 @@ elif st.session_state.page == 'casual':
     Below is a breakdown of 20 maneuvers. Each one is tagged with its **Scorecard Tier** so you know how it upgrades your build.
     """)
 
-    # --- STRATEGY DATA ---
-    simpler_strategies = [
-        ("TFSA Maxing", "**[B-Tier: Tax Efficiency]** Standard Protection. Tax-free growth and withdrawals. Prioritize this for long-term compounding growth."),
-        ("RRSP Deduction", "**[B-Tier: Tax Efficiency]** Standard Protection. Tactical tax deferral to shift burden to lower-income years."),
-        ("FHSA Starter", "**[A-Tier: Tax Efficiency]** Optimized Shelter. The ultimate real estate entry buff; tax-deductible in, tax-free out."),
-        ("RESP (CESG Match)", "**[Stable-Build: Profit Efficiency]** Core Growth. Government-assisted education build via 20% grant matching."),
-        ("RDSP (Disability)", "**[Market-Beater: Profit Efficiency]** Enhanced Growth. Specialized grants and bonds for eligible players."),
-        ("Employer Match", "**[Hyper-Growth: Profit Efficiency]** High Velocity. Immediate ROI via workplace benefits; never leave gold on the table."),
-        ("HBP (Home Buyers' Plan)", "**[B-Tier: Tax Efficiency]** Standard Protection. Utilizing RRSP capital to fund property entry without tax penalty."),
-        ("LLP (Lifelong Learning)", "**[B-Tier: Tax Efficiency]** Standard Protection. Deploying RRSP funds tax-free for career-based stat upgrades."),
-        ("House Hacking", "**[Market-Beater: Profit Efficiency]** Enhanced Growth. Reducing housing overhead by converting space into income."),
-        ("Low-MER Indexing", "**[Stable-Build: Profit Efficiency]** Core Growth. Eliminating fee-based friction to ensure market performance.")
-    ]
-
-    complex_strategies = [
-        ("The Smith Maneuver", "**[S-Tier: Tax Efficiency]** Structural Shielding. Converting personal debt interest into tax deductions."),
-        ("Spousal Loan Strategy", "**[S-Tier: Tax Efficiency]** Structural Shielding. Income splitting between spouses at prescribed rates."),
-        ("The BRRRR Method", "**[Hyper-Growth: Profit Efficiency]** High Velocity. Scaling real estate via forced appreciation and equity recycling."),
-        ("Corporate Wealth Injection", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Using small business tax rates to maximize investment capital."),
-        ("Asset Location Optimization", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Placing assets strategically to avoid foreign withholding taxes."),
-        ("Dividend Tax Harvesting", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Maximizing the Canadian Dividend Tax Credit in taxable accounts."),
-        ("Principal Residence Flipping", "**[S-Tier: Tax Efficiency]** Structural Shielding. Utilizing the PRE to generate 100% tax-free capital gains."),
-        ("Leveraged ETF Rotation", "**[Hyper-Growth: Profit Efficiency]** High Velocity. Using leverage to outpace standard index returns in bull cycles."),
-        ("The FHSA-RRSP Double Dip", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Pivoting real estate deductions into retirement shelters."),
-        ("Capital Gain Harvesting", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Realizing gains in low-income years to step-up cost basis.")
-    ]
-
-    # --- TWO COLUMN LAYOUT ---
     col1, col2 = st.columns(2)
-
     with col1:
         st.markdown("### 🛡️ Standard Gear (Simpler)")
-        for title, desc in simpler_strategies:
-            with st.expander(f"**{title}**"):
-                st.write(desc)
-
+        simpler = [
+            ("TFSA Maxing", "**[B-Tier: Tax Efficiency]** Standard Protection. Tax-free growth and withdrawals. Prioritize this for long-term compounding growth."),
+            ("RRSP Deduction", "**[B-Tier: Tax Efficiency]** Standard Protection. Tactical tax deferral to shift burden to lower-income years."),
+            ("FHSA Starter", "**[A-Tier: Tax Efficiency]** Optimized Shelter. The ultimate real estate entry buff; tax-deductible in, tax-free out."),
+            ("RESP (CESG Match)", "**[Stable-Build: Profit Efficiency]** Core Growth. Government-assisted education build via 20% grant matching."),
+            ("RDSP (Disability)", "**[Market-Beater: Profit Efficiency]** Enhanced Growth. Specialized grants and bonds for eligible players."),
+            ("Employer Match", "**[Hyper-Growth: Profit Efficiency]** High Velocity. Immediate ROI via workplace benefits; never leave gold on the table."),
+            ("HBP (Home Buyers' Plan)", "**[B-Tier: Tax Efficiency]** Standard Protection. Utilizing RRSP capital to fund property entry without tax penalty."),
+            ("LLP (Lifelong Learning)", "**[B-Tier: Tax Efficiency]** Standard Protection. Deploying RRSP funds tax-free for career-based stat upgrades."),
+            ("House Hacking", "**[Market-Beater: Profit Efficiency]** Enhanced Growth. Reducing housing overhead by converting space into income."),
+            ("Low-MER Indexing", "**[Stable-Build: Profit Efficiency]** Core Growth. Eliminating fee-based friction to ensure market performance.")
+        ]
+        for title, desc in simpler:
+            with st.expander(f"**{title}**"): st.write(desc)
     with col2:
         st.markdown("### 🔥 Advanced Enchants (Complex)")
-        for title, desc in complex_strategies:
-            with st.expander(f"**{title}**"):
-                st.write(desc)
-        
+        complex_s = [
+            ("The Smith Maneuver", "**[S-Tier: Tax Efficiency]** Structural Shielding. Converting personal debt interest into tax deductions."),
+            ("Spousal Loan Strategy", "**[S-Tier: Tax Efficiency]** Structural Shielding. Income splitting between spouses at prescribed rates."),
+            ("The BRRRR Method", "**[Hyper-Growth: Profit Efficiency]** High Velocity. Scaling real estate via forced appreciation and equity recycling."),
+            ("Corporate Wealth Injection", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Using small business tax rates to maximize investment capital."),
+            ("Asset Location Optimization", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Placing assets strategically to avoid foreign withholding taxes."),
+            ("Dividend Tax Harvesting", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Maximizing the Canadian Dividend Tax Credit in taxable accounts."),
+            ("Principal Residence Flipping", "**[S-Tier: Tax Efficiency]** Structural Shielding. Utilizing the PRE to generate 100% tax-free capital gains."),
+            ("Leveraged ETF Rotation", "**[Hyper-Growth: Profit Efficiency]** High Velocity. Using leverage to outpace standard index returns in bull cycles."),
+            ("The FHSA-RRSP Double Dip", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Pivoting real estate deductions into retirement shelters."),
+            ("Capital Gain Harvesting", "**[A-Tier: Tax Efficiency]** Optimized Shelter. Realizing gains in low-income years to step-up cost basis.")
+        ]
+        for title, desc in complex_s:
+            with st.expander(f"**{title}**"): st.write(desc)
     st.info("💡 **Casual Player Walkthrough Tip:** These strategies carry higher risk/complexity. Always consult with a CPA or Fee-Only advisor before executing high-level maneuvers.")
 
-# --- EXPERT PLAYER PAGE ---
 elif st.session_state.page == 'expert':
     if st.button("← Back to Hub"): change_page('home')
     st.title("👑 Expert Player: Structural Arbitrage & Wealth Preservation")
-    
     st.markdown("""
     At this level, "picking stocks" is irrelevant. You are now competing on **Structural Advantage**. 
     The goal is to move wealth into silos where the government has no "share" of the growth, utilizing complex legal and corporate frameworks.
     """)
-
     col1, col2 = st.columns(2)
-
     with col1:
         st.markdown('<div class="expert-header">🛡️ Infrastructure & Tax Arbitrage</div>', unsafe_allow_html=True)
-        
-        infra_strategies = [
+        infra = [
             ("The 3-Tier Corporate Purge", "**Strategy:** Cleaning 'tainted' active business assets into a HoldCo to maintain LCGE eligibility. Decouples operations from passive investments."),
             ("Prescribed Rate Spousal Trusts", "**Strategy:** Locking in low interest rates via formal loans to shift high-yield income from 54% brackets to lower spouse brackets perpetually."),
             ("The Capital Class Swap", "**Strategy:** Utilizing Corporate Class investment funds to convert taxable interest/dividends into deferred capital gains within non-registered environments."),
@@ -509,15 +505,11 @@ elif st.session_state.page == 'expert':
             ("Inter-Vivos Asset Transfers", "**Strategy:** Utilizing 'Living Trusts' to manage asset distribution outside of probate, ensuring privacy and immediate control for heirs."),
             ("Capital Dividend Account (CDA) Flushing", "**Strategy:** Strategically paying out tax-free dividends from the non-taxable portion of corporate capital gains to clear the CDA.")
         ]
-        
-        for title, desc in infra_strategies:
-            with st.expander(f"**{title}**"):
-                st.write(desc)
-
+        for title, desc in infra:
+            with st.expander(f"**{title}**"): st.write(desc)
     with col2:
         st.markdown('<div class="expert-header">🔥 Advanced Capital & Estate Enchants</div>', unsafe_allow_html=True)
-        
-        capital_strategies = [
+        cap = [
             ("Immediate Financing Arrangement (IFA)", "**Strategy:** Using corporate dollars to fund a large permanent policy, then immediately borrowing the CSV back to reinvest in the business."),
             ("Cash Surrender Value (CSV) Lending", "**Strategy:** Using life insurance cash values as collateral for low-interest bank loans to fund acquisitions without triggering tax on gains."),
             ("Cascading Life Insurance", "**Strategy:** Funding policies on children/grandchildren to move wealth down generations tax-free, effectively bypassing the 21-year trust rule."),
@@ -529,9 +521,6 @@ elif st.session_state.page == 'expert':
             ("Derivative-Based Yield Enhancement", "**Strategy:** Using covered call overlays or collar structures within a Corp to manufacture 'synthetic' capital gains over interest."),
             ("Private Health Services Plan (PHSP)", "**Strategy:** Structuring executive compensation to include tax-free health spending accounts that bypass payroll and income taxes.")
         ]
-
-        for title, desc in capital_strategies:
-            with st.expander(f"**{title}**"):
-                st.write(desc)
-        
+        for title, desc in cap:
+            with st.expander(f"**{title}**"): st.write(desc)
     st.warning("⚠️ **EXPERT LEVEL ADVISORY:** These maneuvers require a 'Tax Dream Team' (CPA, Tax Lawyer, and Estate Specialist). Execution errors at this level can trigger GAAR (General Anti-Avoidance Rule) penalties.")
