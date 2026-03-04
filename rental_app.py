@@ -31,17 +31,14 @@ def change_page(new_page):
     st.rerun()
 
 # --- DYNAMIC STYLING ---
-if st.session_state.page == 'bdwm':
+if st.session_state.page in ['bdwm', 'current_deal']:
     container_width = "95%"
 else:
     container_width = "1150px"
 
 st.markdown(f"""
     <style>
-    /* Ensure Header is visible for the toggle button but hide footer */
     footer {{ visibility: hidden; }}
-    
-    /* Make the Sidebar Toggle Button Bold and Black */
     button[data-testid="stSidebarCollapseButton"] {{
         color: black !important;
         font-weight: bold !important;
@@ -51,17 +48,13 @@ st.markdown(f"""
         stroke: black !important;
         stroke-width: 2px !important;
     }}
-
     .block-container {{ max-width: {container_width}; padding-top: 1.5rem; padding-bottom: 1rem; }}
-    
     .excel-header {{ 
         background-color: #1e293b; color: white; font-weight: bold; 
         padding: 8px 12px; border: 1px solid #94a3b8; margin-top: 15px;
         font-size: 0.95rem; border-radius: 4px 4px 0 0;
     }}
-    
     .stTable {{ border: 1px solid #94a3b8; background-color: white; margin-top: -1px; }}
-    
     .quest-header {{
         background: linear-gradient(90deg, #3b82f6 0%, #1e3a8a 100%);
         color: white; padding: 10px 15px; border-radius: 8px;
@@ -69,27 +62,24 @@ st.markdown(f"""
         display: flex; align-items: center;
     }}
     .quest-step {{ font-weight: bold; color: #3b82f6; margin-right: 10px; }}
-    
     .casual-header {{
         background: linear-gradient(90deg, #8b5cf6 0%, #4c1d95 100%);
         color: white; padding: 10px 15px; border-radius: 8px;
         margin: 20px 0 10px 0; font-weight: bold; font-size: 1.2rem;
         display: flex; align-items: center;
     }}
-
     .expert-header {{
         background: linear-gradient(90deg, #10b981 0%, #064e3b 100%);
         color: white; padding: 10px 15px; border-radius: 8px;
         margin: 20px 0 10px 0; font-weight: bold; font-size: 1.2rem;
         display: flex; align-items: center;
     }}
-
     .pro-tip {{ background-color: #f0fdf4; border-left: 5px solid #22c55e; padding: 10px; margin: 10px 0; border-radius: 4px; color: #166534; }}
     .checklist-header {{ font-weight: bold; color: #1e3a8a; margin-top: 10px; text-decoration: underline; }}
-
     @media print {{
         @page {{ size: portrait; margin: 0.25in; }}
-        .stApp {{ zoom: 70%; background-color: white !important; background-image: none !important; }}
+        /* Zoom slightly more out to ensure the 4 tables fit on Page 1 */
+        .stApp {{ zoom: 60%; background-color: white !important; background-image: none !important; }}
         [data-testid="stSidebar"] {{ display: none !important; }}
         .main .block-container {{ max-width: 100% !important; padding: 0 !important; margin: 0 !important; }}
         div[data-testid="stTable"], .stTable {{ 
@@ -100,7 +90,13 @@ st.markdown(f"""
         }}
         .excel-header, .stMetric {{ page-break-inside: avoid !important; }}
         button, header, footer, .stActionButton {{ display: none !important; }}
-        .print-only-summary {{ display: block !important; visibility: visible !important; }}
+        
+        /* Forces the summary to always start on a new page */
+        .print-only-summary {{ 
+            display: block !important; 
+            visibility: visible !important; 
+            page-break-before: always !important;
+        }}
         .page-break {{ display: block; page-break-before: always; }}
     }}
     @media screen {{ .print-only-summary {{ display: none !important; }} }}
@@ -192,26 +188,56 @@ def calc_stats(loan_amt, amort, h_rate, heloc_used, tax_bracket, claim_cca, p_pr
 # --- PAGE ROUTING ---
 
 if st.session_state.page == 'home':
+    # REINSTATED LARGE BUTTON HOME PAGE DESIGN
+    home_style = """
+    <style>
+        div.stButton > button {
+            height: 140px !important;
+            border-radius: 15px !important;
+            border: 2px solid #1e3a8a !important;
+            background-color: rgba(255, 255, 255, 0.9) !important;
+            transition: all 0.3s ease;
+        }
+        div.stButton > button:hover {
+            border-color: #3b82f6 !important;
+            background-color: #ffffff !important;
+            transform: scale(1.02);
+        }
+        div.stButton > button p {
+            font-size: 22px !important;
+            font-weight: 800 !important;
+            color: #1e3a8a !important;
+            line-height: 1.1 !important;
+            text-align: center !important;
+            white-space: normal !important;
+        }
+    </style>
+    """
+    
     if os.path.exists("background.png"):
         bin_str = get_base64("background.png")
-        st.markdown(f"""<style>.stApp {{ background-image: url("data:image/png;base64,{bin_str}"); background-size: cover; background-position: center; }} div.stButton > button p {{ font-size: 20px !important; font-weight: bold !important; }} div.stButton > button {{ height: 100px !important; }}</style>""", unsafe_allow_html=True)
-    else:
-        st.markdown("<style>.stApp { background-color: #f8fafc; } div.stButton > button p { font-size: 20px !important; font-weight: bold !important; } div.stButton > button { height: 100px !important; }</style>", unsafe_allow_html=True)
+        st.markdown(f"""<style>.stApp {{ background-image: url("data:image/png;base64,{bin_str}"); background-size: cover; background-position: center; }}</style>""", unsafe_allow_html=True)
+    
+    st.markdown(home_style, unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 120px;'></div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='margin-top: 200px;'></div>", unsafe_allow_html=True)
+    # ROW 1: ANALYSIS TOOLS
+    r1c1, r1c2, r1c3 = st.columns(3)
+    if r1c1.button("📊 MARKET\nINTELLIGENCE", use_container_width=True): change_page('bdwm')
+    if r1c2.button("🏠 NEW RENTAL\nANALYSIS", use_container_width=True): change_page('rental')
+    # CHANGED NAME TO CURRENT RENTAL ANALYSIS BELOW
+    if r1c3.button("📈 CURRENT RENTAL\nANALYSIS", use_container_width=True): change_page('current_deal')
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    if c1.button("📊 MARKET INTELLIGENCE", use_container_width=True): change_page('bdwm')
-    if c2.button("🏠 NEW RENTAL ANALYSIS", use_container_width=True): change_page('rental')
-    if c3.button("🎮 NOOB WALKTHROUGH", use_container_width=True): change_page('noob')
-    if c4.button("⚔️ CASUAL PLAYER WALKTHROUGH", use_container_width=True): change_page('casual')
-    if c5.button("👑 EXPERT PLAYER WALKTHROUGH", use_container_width=True): change_page('expert')
+    st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+
+    # ROW 2: WALKTHROUGHS
+    r2c1, r2c2, r2c3 = st.columns(3)
+    if r2c1.button("🎮 NOOB\nWALKTHROUGH", use_container_width=True): change_page('noob')
+    if r2c2.button("⚔️ CASUAL\nWALKTHROUGH", use_container_width=True): change_page('casual')
+    if r2c3.button("👑 EXPERT\nWALKTHROUGH", use_container_width=True): change_page('expert')
 
 elif st.session_state.page == 'bdwm':
     if st.button("← Back"): change_page('home')
-    
-    # Title removed to eliminate double-header
-    
     csv_file = "BDWM Analysis Summary.csv"
     if os.path.exists(csv_file):
         try:
@@ -243,7 +269,6 @@ elif st.session_state.page == 'bdwm':
     if os.path.exists(pdf_path):
         with open(pdf_path, "rb") as f:
             base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-        # Appended #toolbar=0 to the base64 source to hide the PDF viewer title bar
         pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}#toolbar=0" style="width:100%; height:1200px;" type="application/pdf"></iframe>'
         st.markdown(pdf_display, unsafe_allow_html=True)
 
@@ -342,10 +367,141 @@ elif st.session_state.page == 'rental':
         matrix_df[f"{s*100:+.1f}%"] = [f"{s*100:+.1f}%", f"{(m_rate+s)*100:.2f}%", f"${cash:,.0f}", f"${prin:,.0f}", f"${at:,.0f}", f"${bt:,.0f}", cash_p, prin_p, at_p, bt_p, repay_val]
     st.table(matrix_df.style.apply(lambda row: ['background-color: yellow;' if row.name in [4, 5, 8, 9] else '' for _ in row], axis=1))
 
-    st.markdown("<div class='page-break print-only-summary'></div><div class='print-only-summary'><div class='excel-header'>ANALYSIS INPUT SUMMARY</div>", unsafe_allow_html=True)
+    # PRINT ONLY SUMMARY - PAGE 2 START
+    st.markdown("<div class='print-only-summary'><div class='excel-header'>ANALYSIS INPUT SUMMARY</div>", unsafe_allow_html=True)
     summary_df = pd.DataFrame({
         "Variable": ["Province", "City", "Purchase Price", "Downpayment %", "Mortgage Rate", "Target Rent", "Property Tax", "Renovations"],
         "Value": [prov, city, f"${p_price:,.0f}", f"{down_pct*100:.1f}%", f"{m_rate*100:.2f}%", f"${target_rent:,.0f}", f"${prop_tax:,.0f}", f"${renos:,.0f}"]
+    })
+    st.table(summary_df)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+elif st.session_state.page == 'current_deal':
+    if st.button("← Back"): change_page('home')
+    
+    with st.sidebar:
+        st.subheader("LOAN BALANCE DETAILS")
+        p_price = st.number_input("Purchase price", value=330000)
+        down_pct = st.number_input("Downpayment (%)", value=20.0) / 100
+        m_rate = st.number_input("Mortgage rate (%)", value=4.5) / 100
+        amort = st.number_input("Amortization (Yrs)", value=25)
+        heloc_bal = st.number_input("HELOC balance", value=0)
+        h_rate = st.number_input("HELOC rate (%)", value=0.0) / 100
+        tax_bracket = st.number_input("Marginal Tax (%)", value=29.65) / 100
+        
+        st.subheader("MONTHLY COST")
+        prop_tax = st.number_input("Property tax", value=125)
+        ins = st.number_input("Insurance", value=65)
+        equip_rent = st.number_input("Equip. rental", value=56)
+        condo_fees = st.number_input("Condo Fees", value=0)
+        utilities = st.number_input("Utilities", value=0)
+        other_mo = st.number_input("Other Monthly", value=0)
+        depreciation = st.number_input("Depreciation (Non-Cash)", value=1100)
+
+        st.subheader("CAPITAL COMMITMENT")
+        legal_closing = st.number_input("Legal/Closing", value=3500)
+        ltt_val = st.number_input("Land Transfer Tax", value=3425)
+        renos = st.number_input("Renovation", value=15000)
+        other_cap = st.number_input("Other Capital", value=0)
+        
+        st.subheader("REVENUE")
+        target_rent = st.number_input("Select Base Rent", value=2200)
+
+    # Derived Logic
+    loan_amt = p_price * (1 - down_pct)
+    down_amt = p_price * down_pct
+    invested_cap = down_amt + legal_closing + ltt_val + renos + other_cap - heloc_bal
+
+    st.title("📈 Current Deal Analysis: Property Performance")
+    
+    # PAGE 1 START
+    st.markdown("<div class='excel-header'>CAPITAL COMMITMENT</div>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.write(f"**Downpayment:** ${down_amt:,.2f}")
+        st.write(f"**Legal + disbursement:** ${legal_closing:,.2f}")
+    with c2:
+        st.write(f"**Land transfer tax:** ${ltt_val:,.2f}")
+        st.write(f"**Renovation:** ${renos:,.2f}")
+    with c3:
+        st.write(f"**Other:** ${other_cap:,.2f}")
+        st.write(f"**HELOC Funding:** :red[- ${heloc_bal:,.2f}]")
+    st.success(f"### **Net Cash Invested: ${invested_cap:,.2f}**")
+
+    st.markdown("<div class='excel-header'>NET CASH RETURN</div>", unsafe_allow_html=True)
+    rent_steps = [target_rent - 200, target_rent - 100, target_rent, target_rent + 100, target_rent + 200]
+    rent_rows = []
+    mort_pi = loan_amt * ((m_rate/12) * (1 + (m_rate/12))**(amort*12)) / ((1 + (m_rate/12))**(amort*12) - 1)
+    total_real_mo = mort_pi + prop_tax + ins + equip_rent + condo_fees + utilities + other_mo + ((heloc_bal * h_rate) / 12)
+    
+    for r in rent_steps:
+        mo_return = r - total_real_mo
+        rent_rows.append([r, mo_return, mo_return * 12])
+    
+    df_rent = pd.DataFrame(rent_rows, columns=["Rental Rate", "Monthly net return", "Annual net return"])
+    st.table(df_rent.style.format("${:,.2f}").apply(lambda x: ['background-color: yellow' if x.name == 2 else '' for _ in x], axis=1))
+
+    st.markdown("<div class='excel-header'>MONTHLY COST</div>", unsafe_allow_html=True)
+    int_mo = (loan_amt * m_rate) / 12
+    deductible_mo = int_mo + prop_tax + ins + equip_rent + condo_fees + utilities + other_mo + ((heloc_bal * h_rate) / 12)
+    
+    cost_rows = pd.DataFrame([
+        ["Mortgage (p/i)", mort_pi, int_mo],
+        ["Property tax", prop_tax, prop_tax],
+        ["Insurance", ins, ins],
+        ["Equipment rental", equip_rent, equip_rent],
+        ["Condo fees", condo_fees, condo_fees],
+        ["Utility", utilities, utilities],
+        ["HELOC interest cost", (heloc_bal * h_rate)/12, (heloc_bal * h_rate)/12],
+        ["Other", other_mo, other_mo],
+        ["Depreciation (4% of cb)", 0, depreciation],
+        ["TOTAL", total_real_mo, deductible_mo + depreciation]
+    ], columns=["Item", "Real Cost", "Deductible Cost"])
+    st.table(cost_rows.style.format({"Real Cost": "${:,.2f}", "Deductible Cost": "${:,.2f}"}).apply(
+        lambda x: ['font-weight: bold; border-top: 2px solid black' if x.name == 9 else '' for _ in x], axis=1
+    ))
+
+    st.markdown("<div class='excel-header'>RETURN METRIC MATRIX - INTEREST RATE SENSITIVITY</div>", unsafe_allow_html=True)
+    shifts = [x / 1000 for x in range(-20, 25, 5)] 
+    labels = ["Rate change", "Mortgage rate", "HELOC rate", "Net cash return ($)", "Repayment of mortgage ($)", "After tax total ($)", "Before tax total ($)", "Net cash return (%)", "After tax total (%)", "Before tax total (%)", "Repayment period (years)"]
+    matrix_df = pd.DataFrame({"Metric": labels})
+    
+    for s in shifts:
+        current_m_rate = m_rate + s
+        i_s = current_m_rate / 12
+        pi_s = loan_amt * (i_s * (1 + i_s)**(amort*12)) / ((1 + i_s)**(amort*12) - 1)
+        int_s = (loan_amt * current_m_rate) / 12
+        
+        ann_cash = (target_rent - (pi_s + prop_tax + ins + equip_rent + condo_fees + utilities + other_mo + ((heloc_bal * (h_rate+s))/12))) * 12
+        ann_prin = (pi_s - int_s) * 12
+        taxable_profit = (target_rent * 12) - ((int_s * 12) + (prop_tax*12) + (ins*12) + (equip_rent*12) + (condo_fees*12) + (utilities*12) + (other_mo*12) + (heloc_bal * (h_rate+s)) + depreciation)
+        tax_bill = max(0, taxable_profit * tax_bracket)
+        at_total = ann_cash + ann_prin - tax_bill
+        at_total = ann_cash + ann_prin - tax_bill
+        bt_total = ann_cash + ann_prin
+        
+        if invested_cap <= 0:
+            cash_p, at_p, bt_p = "∞", "∞", "∞"
+        else:
+            cash_p = f"{(ann_cash/invested_cap)*100:.2f}%"
+            at_p = f"{(at_total/invested_cap)*100:.2f}%"
+            bt_p = f"{(bt_total/invested_cap)*100:.2f}%"
+
+        repay_period = f"{invested_cap/bt_total:.2f}" if bt_total > 0 else "99+"
+        
+        matrix_df[f"{s*100:+.1f}%"] = [
+            f"{s*100:+.1f}%", f"{current_m_rate*100:.2f}%", f"{(h_rate+s)*100:.2f}%",
+            f"${ann_cash:,.0f}", f"${ann_prin:,.0f}", f"${at_total:,.0f}", f"${bt_total:,.0f}",
+            cash_p, at_p, bt_p,
+            repay_period
+        ]
+    st.table(matrix_df.style.apply(lambda row: ['background-color: #fef9c3;' if row.name in [5, 6, 8, 9] else '' for _ in row], axis=1))
+
+    # PRINT ONLY SUMMARY - PAGE 2 START
+    st.markdown("<div class='print-only-summary'><div class='excel-header'>ANALYSIS INPUT SUMMARY</div>", unsafe_allow_html=True)
+    summary_df = pd.DataFrame({
+        "Variable": ["Purchase Price", "Downpayment %", "Mortgage Rate", "Target Rent", "Property Tax", "HELOC Balance", "Renovation"],
+        "Value": [f"${p_price:,.0f}", f"{down_pct*100:.1f}%", f"{m_rate*100:.2f}%", f"${target_rent:,.0f}", f"${prop_tax:,.0f}", f"${heloc_bal:,.0f}", f"${renos:,.0f}"]
     })
     st.table(summary_df)
     st.markdown("</div>", unsafe_allow_html=True)
